@@ -3357,6 +3357,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             } catch (RuntimeException ignored) {
             }
         }
+        HdmiAutoSwitch.current = sourceId;
         Integer source = mappedSource(sourceId);
         if (source != null && source >= 0 && !inputAction.isEmpty()) {
             try {

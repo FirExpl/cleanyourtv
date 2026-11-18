@@ -1,8 +1,11 @@
 package com.gathin.tvhome;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import java.util.Collections;
@@ -34,6 +37,8 @@ public class InputKeyService extends AccessibilityService {
     private boolean consumeVolumeKeys;
     /** Stops key filtering while a game controller is connected or after a volume change; null unless gamepad_passthrough or volume_pauses_filter, and key_filter. */
     private GamepadPassthrough gamepads;
+    /** hdmi_auto_switch; null when off. */
+    private HdmiAutoSwitch hdmi;
     /** The bound helper, for global actions Home's own key path asks for (RemoteKeys). */
     static InputKeyService running;
 
@@ -57,6 +62,15 @@ public class InputKeyService extends AccessibilityService {
         frontAppScancodes = RemoteKeys.parseFrontAppScancodes(config.appKeys);
         // gamepad_passthrough and volume_pauses_filter, off by default.
         if (gamepads == null) gamepads = GamepadPassthrough.start(this, config);
+        if (hdmi == null) hdmi = HdmiAutoSwitch.start(this, config);
+        // input_key_service.xml subscribes to no events; hdmi_auto_switch needs the app in front. setServiceInfo()
+        // drops the XML's filter flag, so it is set again (as HomeKeyService does).
+        AccessibilityServiceInfo info = hdmi == null ? null : getServiceInfo();
+        if (info != null) {
+            info.eventTypes |= AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
+            if (config.keyFilter) info.flags |= AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS;
+            setServiceInfo(info);
+        }
     }
 
     private boolean isInputKey(int keyCode) {
@@ -99,11 +113,32 @@ public class InputKeyService extends AccessibilityService {
         RemoteKeys.release(this);
         if (gamepads != null) gamepads.stop();
         if (consumeVolumeKeys) VolumeKeys.stop();
+        if (hdmi != null) hdmi.stop();
         super.onDestroy();
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        // Only activities count, so a toast or the volume bar doesn't change the app in front (as in HomeKeyService).
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                || event.getPackageName() == null || event.getClassName() == null) return;
+        try {
+            ComponentName window = new ComponentName(event.getPackageName().toString(), event.getClassName().toString());
+            getPackageManager().getActivityInfo(window, 0);
+            RemoteKeys.frontPackage = window.getPackageName();
+        } catch (PackageManager.NameNotFoundException notAnActivity) {
+            // a dialog, panel or overlay: the app under it is still in front. The input player's "No signal".
+            if (hdmi != null) hdmi.onPlayerDialog(event.getPackageName().toString(), joined(event));
+        }
+        // Philips' playtv reports its window by a view class, not its activity: any window of the input player
+        // means an input is on screen.
+        if (hdmi != null && hdmi.isPlayer(event.getPackageName())) RemoteKeys.frontPackage = event.getPackageName().toString();
+    }
+
+    private static CharSequence joined(AccessibilityEvent event) {
+        StringBuilder text = new StringBuilder();
+        for (CharSequence part : event.getText()) text.append(part).append('\n');
+        return text;
     }
 
     @Override

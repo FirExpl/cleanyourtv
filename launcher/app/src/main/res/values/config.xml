@@ -35,7 +35,7 @@
     </string-array>
 
     <!-- The TV's Live TV / tuner app, offered at the end of the Inputs menu. Leave empty to omit. -->
-    <string name="live_tv_package" translatable="false">com.mediatek.wwtv.tvcenter</string>
+    <string name="live_tv_package" translatable="false">org.droidtv.playtv</string>
 
     <!-- Open the Live TV app above the first time Home comes up after the TV is switched on, for sets that are
          mostly used for broadcast TV. Once per boot: Home after that stays Home. Can also be set with
@@ -150,7 +150,16 @@
          once, a press or hold within those 4 s repeats as usual, and the remote buttons below work again once the
          pause ends. With gamepad_passthrough on too, filtering stays off while a gamepad is connected. A theme can
          set it ("volume_pauses_filter"). -->
-    <bool name="volume_pauses_filter">false</bool>
+    <bool name="volume_pauses_filter">true</bool>
+
+    <!-- With INPUT_KEY_SERVICE=1: switch to an HDMI port when it gets a signal; at boot and screen-on, to the
+         lowest-numbered port with a signal; and when the port on screen loses it, to the next one or Home.
+         A port holding an ARC soundbar (CEC audio system) is skipped. Needs live_tv_package to be the app that
+         shows the inputs. Off by default (HdmiAutoSwitch). -->
+    <bool name="hdmi_auto_switch">true</bool>
+    <!-- The heading of the input player's "No signal" dialog, in the TV's language: hdmi_auto_switch leaves a port
+         that shows it (Philips: "No signal"). Empty: only the hotplug state counts. -->
+    <string name="hdmi_no_signal_text" translatable="false">No signal</string>
 
     <!-- true: Channel Up/Down do nothing while Home is in front. Unhandled, they open the TV's Live TV app (Sony
          BRAVIA, Android 9: com.sony.dtv.tvx), which is a stray press on a set nobody watches broadcast on. Inside any
@@ -245,6 +254,11 @@
          where the firmware hands KEYCODE_GUIDE (172) to the stock launcher and no app ever receives it. Leave empty
          to omit. -->
     <string-array name="app_keys" translatable="false">
+        <item>scan:776:org.smarttube.stable</item>
+        <item>scan:772:com.phlox.tvwebbrowser</item>
+        <item>scan:774:tv.twitch.android.app</item>
+        <item>scan:141:settings</item>
+        <item>scan:779:home</item>
     </string-array>
 
     <!-- Package of the stock launcher, for TVs whose firmware turns it back on after it was disabled. XGIMI's
